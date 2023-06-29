@@ -327,17 +327,17 @@ def policy_iteration(env, custom_map, max_ittr=30, theta=0.01, discount_factor=0
     ittr = 0
     policy_stable = False
     Q = np.zeros((env.observation_space.n, env.action_space.n))
+    Q_p = np.zeros((env.observation_space.n, env.action_space.n))
+
     while not policy_stable and ittr < max_ittr:
         while True:
             delta = 0
             for s in range(env.observation_space.n):
                 old_value = V[s]
                 for a in range(env.action_space.n):
-                    temp = 0
+                    Q[s][a] = 0
                     for prob, next_state, reward, done in env.P[s][a]:
-                        temp += prob * (reward + discount_factor * V[next_state])
-
-                    Q[s][a] = temp
+                        Q[s][a] += prob * (reward + discount_factor * V[next_state])
 
                 V[s] = np.max(Q[s])
                 delta = max(delta, abs(old_value - V[s]))
@@ -348,10 +348,10 @@ def policy_iteration(env, custom_map, max_ittr=30, theta=0.01, discount_factor=0
             for s in range(env.observation_space.n):
                 old_action = np.argmax(policy[s])
                 for a in range(env.action_space.n):
-                    Q[s][a] = 0
+                    Q_p[s][a] = 0
                     for prob, next_state, reward, done in env.P[s][a]:
-                        Q[s][a] += prob * (reward + discount_factor * V[next_state])
-                new_action = np.argmax(Q[s])
+                        Q_p[s][a] += prob * (reward + discount_factor * V[next_state])
+                new_action = np.argmax(Q_p[s])
 
                 if old_action != new_action:
                     policy_stable = False
