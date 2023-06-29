@@ -306,89 +306,6 @@ def do_policy(env, policy, episdoes=5):
 ############################### algorithm methods : you have to implement these algorithms
 
 
-def select_action(action_num, action_prob):
-    selected_action = 0
-    # for i in range(action_num):
-    #     print(action_prob[i])
-
-    val = max(action_prob.values())  # max probability
-
-    for key, value in action_prob.items():
-        if val == value:
-            selected_action = key
-            break
-
-
-    if max(action_prob.values()) == min(action_prob.values()):
-        # print("choose random")
-        selected_action = random.randint(0, action_num-1)
-
-    # print("action = ", selected_action)
-    # print("max = ", val)
-    return selected_action
-
-
-def compute_state_utility(v, s, gamma):
-    """Compute the expected utility of a state"""
-    action_prob = {}
-    for a in range(env.action_space.n):
-        action_prob[a] = 0
-    for a in range(env.action_space.n):
-        for prob, next_state, reward, done in env.P[s][a]:
-            action_prob[a] += prob * (reward + gamma * v[next_state])
-    return action_prob
-
-def policy_evaluation(env, V, policy, gamma, theta):
-
-    # loop over all states
-    while True:
-        delta = 0
-        for s in range(env.observation_space.n):
-            old_value = V[s]
-            # print("old value = ", old_value)
-            # for a in range(env.action_space.n):
-                # V[s] += policy[s][a] * (compute_state_utility(V, s, gamma)[a])
-            for a in range(env.action_space.n):
-                for prob, next_state, reward, done in env.P[s][a]:
-                    V[s] += policy[s][a] * (reward + gamma * V[next_state])
-                    # print("s", s)
-                    # print("V[s] = ", V[s])
-
-            # V[s] = sum(
-            #     policy[s][a] * compute_state_utility(V, s, gamma) for a in range(env.action_space.n))
-            delta = max(delta, abs(old_value - V[s]))
-        if delta < theta:
-            break
-
-    return V
-
-
-
-
-def policy_improvement(env, V, policy, gamma):
-    policy_stable = True
-    for s in range(env.observation_space.n):
-        # best_a = 0
-        # max_prob = -1
-        # for a in range(env.action_space.n):
-        #     if policy[s][a] > max_prob:
-        #         max_prob = policy[s][a]
-        #         best_a = a
-        old_action = select_action(env.action_space.n, policy[s])
-        # old_action = np.argmax(policy[s][a] for a in range(env.action_space.n))
-        for a in range(env.action_space.n):
-            for prob, next_state, reward, done in env.P[s][a]:
-                policy[s][a] += prob * (reward + gamma * V[next_state])
-        # policy[s] = compute_state_utility(V, s, gamma)
-        new_action = select_action(env.action_space.n, policy[s])
-        if old_action != new_action:
-            policy_stable = False
-        # for a in range(env.action_space.n):
-        #     policy[s][a] = 0.0
-        # policy[s][new_action] = 1.0
-    print(type(policy))
-    return policy, policy_stable
-
 def convert_policy(env, policy):
     P = {}
     for s in range(env.observation_space.n):
@@ -420,7 +337,9 @@ def policy_iteration(env, custom_map, max_ittr=30, theta=0.01, discount_factor=0
                     for prob, next_state, reward, done in env.P[s][a]:
                         temp += prob * (reward + discount_factor * V[next_state])
 
-                    V[s] += policy[s][a] * temp
+                    Q[s][a] = temp
+
+                V[s] = np.max(Q[s])
                 delta = max(delta, abs(old_value - V[s]))
             if delta < theta:
                 break
@@ -429,11 +348,14 @@ def policy_iteration(env, custom_map, max_ittr=30, theta=0.01, discount_factor=0
             for s in range(env.observation_space.n):
                 old_action = np.argmax(policy[s])
                 for a in range(env.action_space.n):
+                    Q[s][a] = 0
                     for prob, next_state, reward, done in env.P[s][a]:
                         Q[s][a] += prob * (reward + discount_factor * V[next_state])
                 new_action = np.argmax(Q[s])
+
                 if old_action != new_action:
                     policy_stable = False
+
                 for a in range(env.action_space.n):
                     if a == new_action:
                         policy[s][a] = 1
